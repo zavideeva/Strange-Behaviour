@@ -57,6 +57,7 @@ def run():
         return 0
     print("How many objects do you want to detect?")
     ans = input()
+	# check if input is decimal
     if ans.isdecimal():
         ans = int(ans)
     else:
