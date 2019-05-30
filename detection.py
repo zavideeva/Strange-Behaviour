@@ -95,6 +95,7 @@ def run():
 
 def track_object(coord, image):
     object_ = tuple(coord)
+	#choosed MIL
     cur_tracker = create_tracker(0)
     init = cur_tracker.init(image, object_)
     return cur_tracker
