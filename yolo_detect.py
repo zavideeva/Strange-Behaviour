@@ -2,12 +2,13 @@ import numpy as np
 import argparse
 import cv2
 import os
+import detect_object
 
 MIN_PROB = 0.4
 OVERLAP_THRESHHOLD = 0.2
 
 
-def find_electric_objects(img_path, yolo_directory_path, min_prob, overlap_threshhold):
+def find_electric_objects(yolo_directory_path, min_prob, overlap_threshhold, image):
     '''
     Returns map of detected objects
     key   - object name
@@ -24,8 +25,9 @@ def find_electric_objects(img_path, yolo_directory_path, min_prob, overlap_thres
     weightsPath = os.path.sep.join([yolo_directory_path, "yolov3.weights"])
     configPath = os.path.sep.join([yolo_directory_path, "yolov3.cfg"])
 
+
     net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
-    image = cv2.imread(img_path)
+    #image = cv2.imread(img_path)
     (H, W) = image.shape[:2]
 
     ln = net.getLayerNames()
@@ -46,7 +48,8 @@ def find_electric_objects(img_path, yolo_directory_path, min_prob, overlap_thres
             scores = detection[5:]
             classID = np.argmax(scores)
             confidence = scores[classID]
-            if LABELS[classID] in electric_things and confidence > MIN_PROB:
+            #LABELS[classID] in electric_things and
+            if confidence > MIN_PROB:
                 box = detection[0:4] * np.array([W, H, W, H])
                 (centerX, centerY, width, height) = box.astype("int")
 
@@ -64,12 +67,16 @@ def find_electric_objects(img_path, yolo_directory_path, min_prob, overlap_thres
         for i in idxs.flatten():
             x, y = boxes[i][0], boxes[i][1]
             w, h = boxes[i][2], boxes[i][3]
-            names_and_coords[LABELS[classIDs[i]]] = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
+            names_and_coords[LABELS[classIDs[i]]] = (x,y,w,h)
 
     return names_and_coords
 
 
-
 if __name__ == '__main__':
-    img_path = 'images/camera_view.jpg'
-    print(find_electric_objects(img_path, 'yolo-coco', MIN_PROB, OVERLAP_THRESHHOLD))
+    img_path = 'OneStopMoveEnter1cor.mpg'
+    cam = cv2.VideoCapture(img_path)
+    ok, image = cam.read()
+    obmap = find_electric_objects('yolo-coco', MIN_PROB, OVERLAP_THRESHHOLD, image)
+
+    detect_object.detect(obmap, cam, image)
+

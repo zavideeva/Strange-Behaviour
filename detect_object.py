@@ -8,7 +8,7 @@ def create_tracker(index):
     cur_type = tracker_types[index]
 
     if cur_type == "MIL":
-        return cv2.TrackerMIL_create()
+        return cv2.cv2
     elif cur_type == "KCF":
         # faster FPS throughput, but handles slightly lower
         # object tracking accuracy
@@ -64,7 +64,7 @@ def run():
         ans = 0
     objects = []
     for i in range(ans):
-        objects.append(choose_region_detection(frame))
+        objects.append(choose_region_detection1(frame))
     amount_objects = len(objects)
     all_trackers = []
     for i in range(amount_objects):
@@ -94,6 +94,39 @@ def run():
     return 1
 
 
+def detect(objects_map, cam, frame):
+    objects = []
+    print(objects_map)
+    for key in objects_map:
+        objects.append(choose_region_detection1(objects_map[key]))
+    amount_objects = len(objects)
+    all_trackers = []
+    for i in range(amount_objects):
+        all_trackers.append(track_object(objects[i][0], frame))
+    while True:
+        ready, frame = cam.read()
+        if not ready:
+            print("Video ends")
+            break
+        for i in range(amount_objects):
+            upd, obj = all_trackers[i].update(frame)
+            if upd:
+                x1 = (int(obj[0]), int(obj[1]))
+                x2 = (int(obj[0] + obj[2]), int(obj[1] + obj[3]))
+                if (objects[i][1] != None) and (not is_object_inside(objects[i][1], x1+x2)):
+                    print("WARNING: OBJECT IS OUTSIDE OF BORDERS")
+                    print("Borders: ", objects[i][1])
+                    print("Coord: ", x1 + x2)
+                cv2.rectangle(frame, x1, x2, (255, 0, 0), 2, 1)
+        cv2.imshow("Track object", frame)
+        k = cv2.waitKey(1) & 0xff
+        if k == 27:
+            break
+    print("Exit from program")
+    cam.release()
+    cv2.destroyAllWindows()
+
+
 def track_object(coord, image):
     object_ = tuple(coord)
 	#choosed MIL
@@ -111,14 +144,15 @@ def choose_region_detection(image):
             print("Choose borders")
             borders = choose_border(image)
 
-            if not is_object_inside(borders, coords):
-                print("Object is out of borders")
-            else:
-                break
+            # if not is_object_inside(borders, coords):
+            #    print("Object is out of borders")
+
             break
         return [coords, borders]
     return [coords, None]
 
+def choose_region_detection1(coord):
+    return [coord, None]
 
 def choose_border(image):
     coord = cv2.selectROI("Borders", image)
