@@ -100,8 +100,6 @@ def tracking(camera, objects):
                 objects[i].coords = x1 + x2
                 if objects[i].borders and not objects[i].is_object_inside_borders():
                     print("WARNING: OBJECT IS OUTSIDE OF BORDERS")
-                    print("Borders: ", objects[i].borders)
-                    print("Coord: ", objects[i].coords)
                 cv2.rectangle(img, x1, x2, (255, 0, 0), 2, 1)
                 cv2.putText(img, objects[i].name, get_first_point(objects[i].coords), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 255))
                 if objects[i].borders:
@@ -123,7 +121,7 @@ def detect(object_map, camera, img):
 
 if __name__ == '__main__':
     # Testing
-    cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture("video.mp4")
     # cam = cv2.VideoCapture("http://192.168.0.158:4747/video")
     for i in range(5):
         ok, frame = cam.read()
