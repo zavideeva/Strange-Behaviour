@@ -1,5 +1,4 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtGui import QPainter, QColor
 import cv2
 import numpy as np
 
@@ -42,12 +41,15 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 		self.p1 = self.Point()
 		self.p2 = self.Point()
 		self.drawing = False
+		self._red = (0, 0, 255)
+		self._width = 2
 
 	def image_data_slot(self, image_data):
-		self.image = self.get_qimage(image_data)
-		# if self.image.size() != self.size():
-		# self.setFixedSize(self.image.size())
+		if self.drawing:
+			# for (x, y, w, h) in faces: #TODO: add ability to draw many rectangles by storing coordinates in list
+			cv2.rectangle(image_data, (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), self._red, self._width)
 
+		self.image = self.get_qimage(image_data)
 		self.update()
 
 	def get_qimage(self, image: np.ndarray):
@@ -64,7 +66,6 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 		painter = QtGui.QPainter(self)
 		painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform)
 		painter.drawImage(self.rect(), self.image)
-		# painter.fillRect(event.rect(), QtGui.QBrush(self.color))
 		self.image = QtGui.QImage()
 
 		self.update()
@@ -79,20 +80,4 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 		self.p2.y = event.y()
 		self.drawing = True
 
-		print("{} {}, {} {}".format(self.p1.x, self.p1.y, self.p2.x, self.p2.y))
-
-	# def paintEvent(self, e):
-	# 	if self.drawing:
-	# 		qp = QPainter()
-	# 		qp.begin(self)
-	# 		self.drawRectangles(qp)
-	# 		qp.end()
-	#
-	# def drawRectangles(self, qp):
-	# 	col = QColor(0, 0, 0)
-	# 	col.setNamedColor('#6e6e6e')
-	# 	qp.setPen(col)
-	#
-	# 	qp.setBrush(QColor(50, 100, 50))
-	# 	qp.drawRect(self.p1.x, self.p1.y, self.p2.x, self.p2.y)
 # TODO: cooridnates within frame
