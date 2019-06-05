@@ -30,9 +30,6 @@ class MainWidget(QtWidgets.QWidget):
 		self.search_button = QtWidgets.QPushButton('Search')
 		self.layout_buttons.addWidget(self.search_button, 0, QtCore.Qt.AlignLeft)
 
-		# self.add_button.clicked.connect(self.mousePressEvent(Qt.QEvent.MouseButtonPress))
-		# self.qle.textChanged[str].connect(self.onChanged)
-
 		self.layout_add = QtWidgets.QHBoxLayout()
 		self.add_button = QtWidgets.QPushButton('Add')
 		self.layout_add.addWidget(self.add_button, 0, QtCore.Qt.AlignLeft)
@@ -78,7 +75,8 @@ class MainWidget(QtWidgets.QWidget):
 		selected = self.item_list.selectedItems()
 		if selected == None: return
 		for item in selected:
-			self.item_list.removeItemWidget(item)
+			self.item_list.takeItem(self.item_list.row(item))
+
 
 def main():
 	app = QtWidgets.QApplication(sys.argv)
