@@ -1,5 +1,5 @@
 import sys
-from GUI import ObjectDetectionWidget, RecordVideo
+from GUI import *
 from PyQt5 import QtWidgets, QtCore
 
 
@@ -7,8 +7,25 @@ class MainWidget(QtWidgets.QWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 
+		cam = cv2.VideoCapture("video.mp4")
+		for i in range(5):
+			ok, frame = cam.read()
+
+		r = cv2.selectROI("Tracking object", frame)
+		r1 = (int(r[0]), int(r[1]))
+		r2 = (int(r[0] + r[2]), int(r[1] + r[3]))
+		obj1 = TrackableObject(r, "Human")
+		obj1.init_tracker(frame)
+		cv2.rectangle(frame, r1, r2, (0, 255, 0), 2, 1)
+		b = cv2.selectROI("Borders", frame)
+		b1 = (int(b[0]), int(b[1]))
+		b2 = (int(b[0] + b[2]), int(b[1] + b[3]))
+		obj1.set_borders(b1 + b2)
+		obj1.set_cam_borders(cam)
+
 		self.object_detection_widget = ObjectDetectionWidget()
-		self.record_video = RecordVideo()
+		self.record_video = RecordVideo(cam, [obj1])
+
 
 		image_data_slot = self.object_detection_widget.image_data_slot
 		self.record_video.image_data.connect(image_data_slot)
@@ -93,3 +110,5 @@ def main():
 
 if __name__ == '__main__':
 	main()
+	# cam.release()
+	# cv2.destroyAllWindows()

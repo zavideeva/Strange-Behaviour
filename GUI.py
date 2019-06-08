@@ -6,11 +6,13 @@ import numpy as np
 class RecordVideo(QtCore.QObject):
 	image_data = QtCore.pyqtSignal(np.ndarray)
 
-	def __init__(self, camera_port=0, parent=None):
+	def __init__(self, camera=0, objects=None, parent=None):
 		super().__init__(parent)
-		self.camera = cv2.VideoCapture(camera_port)
+		self.camera = camera
 
 		self.timer = QtCore.QBasicTimer()
+
+		self.objects = objects
 
 	def start_recording(self):
 		self.timer.start(0, self)
@@ -19,9 +21,31 @@ class RecordVideo(QtCore.QObject):
 		if event.timerId() != self.timer.timerId():
 			return
 
-		read, data = self.camera.read()
+		read, img = self.camera.read()
 		if read:
-			self.image_data.emit(data)
+			for i in range(len(self.objects)):
+				upd, obj = self.objects[i].tracker.update(img)
+				if upd:
+					self.objects[i].detect_obj(True)
+					x1 = (int(obj[0]), int(obj[1]))
+					x2 = (int(obj[0] + obj[2]), int(obj[1] + obj[3]))
+					self.objects[i].coords = x1 + x2
+					if self.objects[i].borders and not self.objects[i].is_object_inside_borders():
+						print("WARNING: OBJECT IS OUTSIDE OF BORDERS")
+					cv2.rectangle(img, x1, x2, (255, 0, 0), 2, 1)
+					cv2.putText(img, self.objects[i].name, get_first_point(self.objects[i].coords),
+								cv2.FONT_HERSHEY_COMPLEX_SMALL, 1,
+								(255, 255, 255))
+					if self.objects[i].borders:
+						cv2.rectangle(img, get_first_point(self.objects[i].borders),
+									  get_second_point(self.objects[i].borders),
+									  (0, 255, 0), 2, 1)
+					if not self.objects[i].is_object_inside_cam_borders():
+						print("WARNING: OBJECT IS OUTSIDE THE CAMERA VIEW")
+				else:
+					self.objects[i].detect_obj(False)
+			# cv2.imshow("Track object", img)
+			self.image_data.emit(img)
 
 
 class ObjectDetectionWidget(QtWidgets.QWidget):
@@ -53,7 +77,7 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 	def image_data_slot(self, image_data):
 		self.calculate_shearing()
 		if self.drawing:
-		# for (x, y, w, h) in faces: #TODO: add ability to draw many rectangles by storing coordinates in list
+			# for (x, y, w, h) in faces: #TODO: add ability to draw many rectangles by storing coordinates in list
 			x1, y1, x2, y2 = 0, 0, 642, 488
 			if x1 <= self.p1.x and y1 <= self.p1.y and x2 >= self.p2.x and y2 >= self.p2.y:
 				cv2.rectangle(image_data, (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), self._red, self._width)
@@ -89,4 +113,94 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 		self.p2.y = int(event.y() / self.width_shearing)
 		self.drawing = True
 
-	# TODO: cooridnates within frame
+
+# TODO: cooridnates within frame
+
+
+class TrackableObject:
+	tracker = None
+	borders = None
+	cam_borders = None
+	object_not_found = 0
+
+	def __init__(self, coords, name='Object'):
+		self.name = name
+		self.coords = tuple(coords)
+
+	def init_tracker(self, image):
+		self.tracker = create_tracker(4)
+		init_track = self.tracker.init(image, self.coords)
+
+	def is_object_inside_borders(self):
+		b_x1, b_y1, b_x2, b_y2 = self.borders
+		x1, y1, x2, y2 = self.coords
+		return (b_x1 < x1) and (b_y1 < y1) and (x2 < b_x2) and (y2 < b_y2)
+
+	def is_object_inside_cam_borders(self):
+		b_x1, b_y1, b_x2, b_y2 = self.cam_borders
+		x1, y1, x2, y2 = self.coords
+		return (b_x1 < x1) and (b_y1 < y1) and (x2 < b_x2) and (y2 < b_y2)
+
+	def detect_obj(self, ans):
+		if not ans:
+			self.object_not_found += 1
+		else:
+			self.object_not_found = 0
+		if self.object_not_found > 20:
+			print("WARNING:{} IS NOT FOUND!!!".format(self.name))
+
+	def set_borders(self, coords):
+		self.borders = coords
+
+	def set_cam_borders(self, camera):
+		width = camera.get(cv2.CAP_PROP_FRAME_WIDTH)
+		height = camera.get(cv2.CAP_PROP_FRAME_HEIGHT)
+		self.cam_borders = (0, 0, width, height)
+
+
+def create_tracker(index):
+	# types of trackers
+	tracker_types = ("MIL", "KCF", "Boosting", "CSRT", "MedianFlow", "MOSSE")
+	# set type of tracker
+	cur_type = tracker_types[index]
+
+	if cur_type == "MIL":
+		return cv2.TrackerMIL_create()
+	elif cur_type == "KCF":
+		# faster FPS throughput, but handles slightly lower
+		# object tracking accuracy
+		return cv2.TrackerKCF_create()
+	elif cur_type == "Boosting":
+		return cv2.TrackerBoosting_create()
+	elif cur_type == "CSRT":
+		# higher object tracking accuracy, low FPS throughput
+		return cv2.TrackerCSRT_create()
+	elif cur_type == "MedianFlow":
+		return cv2.TrackerMedianFlow_create()
+	elif cur_type == 'MOSSE':
+		# perfect for pure speed
+		return cv2.TrackerMOSSE_create()
+	else:
+		return cv2.TrackerMIL_create()
+
+
+def init_obj_detection(objects_map, img):
+	objects = []
+	for key in objects_map:
+		obj = TrackableObject(objects_map[key], key)
+		obj.init_tracker(img)
+		objects.append(obj)
+	return objects
+
+
+def get_first_point(coords):
+	return coords[0], coords[1]
+
+
+def get_second_point(coords):
+	return coords[2], coords[3]
+
+
+# def detect(object_map, camera, img):
+# 	objs = init_obj_detection(object_map, img)
+# 	tracking(camera, objs)
