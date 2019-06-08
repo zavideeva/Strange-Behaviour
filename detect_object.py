@@ -2,23 +2,26 @@ import cv2
 
 
 class TrackableObject:
-    """
-    Class which
-    """
     tracker = None
     borders = None
+    cam_borders = None
     object_not_found = 0
 
-    def __init__(self, name='Object', coords=None):
+    def __init__(self, coords, name='Object'):
         self.name = name
         self.coords = tuple(coords)
 
     def init_tracker(self, image):
-        self.tracker = create_tracker(1)
+        self.tracker = create_tracker(4)
         init_track = self.tracker.init(image, self.coords)
 
-    def is_object_inside(self):
+    def is_object_inside_borders(self):
         b_x1, b_y1, b_x2, b_y2 = self.borders
+        x1, y1, x2, y2 = self.coords
+        return (b_x1 < x1) and (b_y1 < y1) and (x2 < b_x2) and (y2 < b_y2)
+
+    def is_object_inside_cam_borders(self):
+        b_x1, b_y1, b_x2, b_y2 = self.cam_borders
         x1, y1, x2, y2 = self.coords
         return (b_x1 < x1) and (b_y1 < y1) and (x2 < b_x2) and (y2 < b_y2)
 
@@ -27,11 +30,16 @@ class TrackableObject:
             self.object_not_found += 1
         else:
             self.object_not_found = 0
-        if self.object_not_found > 5:
+        if self.object_not_found > 20:
             print("WARNING:{} IS NOT FOUND!!!".format(self.name))
 
     def set_borders(self, coords):
-        self.borders = (coords[0], coords[1], coords[0] + coords[2], coords[1] + coords[3])
+        self.borders = coords
+
+    def set_cam_borders(self, camera):
+        width = camera.get(cv2.CAP_PROP_FRAME_WIDTH)
+        height = camera.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        self.cam_borders = (0, 0, width, height)
 
 
 def create_tracker(index):
@@ -63,7 +71,7 @@ def create_tracker(index):
 def init_obj_detection(objects_map, img):
     objects = []
     for key in objects_map:
-        obj = TrackableObject(key, objects_map[key])
+        obj = TrackableObject(objects_map[key], key)
         obj.init_tracker(img)
         objects.append(obj)
     return objects
@@ -86,17 +94,18 @@ def tracking(camera, objects):
         for i in range(len(objects)):
             upd, obj = objects[i].tracker.update(img)
             if upd:
+                objects[i].detect_obj(True)
                 x1 = (int(obj[0]), int(obj[1]))
                 x2 = (int(obj[0] + obj[2]), int(obj[1] + obj[3]))
                 objects[i].coords = x1 + x2
-                if objects[i].borders and not objects[i].is_object_inside():
+                if objects[i].borders and not objects[i].is_object_inside_borders():
                     print("WARNING: OBJECT IS OUTSIDE OF BORDERS")
-                    print("Borders: ", objects[i].borders)
-                    print("Coord: ", objects[i].coords)
                 cv2.rectangle(img, x1, x2, (255, 0, 0), 2, 1)
                 cv2.putText(img, objects[i].name, get_first_point(objects[i].coords), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 255))
                 if objects[i].borders:
                     cv2.rectangle(img, get_first_point(objects[i].borders), get_second_point(objects[i].borders), (0, 255, 0), 2, 1)
+                if not objects[i].is_object_inside_cam_borders():
+                    print("WARNING: OBJECT IS OUTSIDE THE CAMERA VIEW")
             else:
                 objects[i].detect_obj(False)
         cv2.imshow("Track object", img)
@@ -113,15 +122,21 @@ def detect(object_map, camera, img):
 if __name__ == '__main__':
     # Testing
     cam = cv2.VideoCapture("video.mp4")
-    ok, frame = cam.read()
+    # cam = cv2.VideoCapture("http://192.168.0.158:4747/video")
+    for i in range(5):
+        ok, frame = cam.read()
+
     r = cv2.selectROI("Tracking object", frame)
     r1 = (int(r[0]), int(r[1]))
     r2 = (int(r[0] + r[2]), int(r[1] + r[3]))
-    obj1 = TrackableObject("Human", r)
+    obj1 = TrackableObject(r, "Human")
     obj1.init_tracker(frame)
     cv2.rectangle(frame, r1, r2, (0, 255, 0), 2, 1)
     b = cv2.selectROI("Borders", frame)
-    obj1.set_borders(b)
+    b1 = (int(b[0]), int(b[1]))
+    b2 = (int(b[0] + b[2]), int(b[1] + b[3]))
+    obj1.set_borders(b1+b2)
+    obj1.set_cam_borders(cam)
     tracking(cam, [obj1])
     cam.release()
     cv2.destroyAllWindows()
