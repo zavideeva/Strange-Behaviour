@@ -44,22 +44,17 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 		self._red = (0, 0, 255)
 		self._width = 2
 
-		self.height_shearing = 1
-		self.width_shearing = 1
+		self.height_shearing = 1072 / 642
+		self.width_shearing = 517 / 488
 
-	def calculate_shearing(self):
-		self.height_shearing = self.size().width() / 488
-		self.width_shearing = self.size().height() / 642
-
-	# print("{} {}".format(self.height_shearing, self.width_shearing))
+		print("{} {}".format(self.height_shearing, self.width_shearing))
 
 	def image_data_slot(self, image_data):
-		self.calculate_shearing()
 		if self.drawing:
 			# for (x, y, w, h) in faces: #TODO: add ability to draw many rectangles by storing coordinates in list
-			x1, y1 = self.frameGeometry().topLeft().x(), self.frameGeometry().topLeft().y()
-			x2, y2 = self.frameGeometry().bottomRight().x(), self.frameGeometry().bottomRight().y()
-
+			# x1, y1 = self.frameGeometry().topLeft().x(), self.frameGeometry().topLeft().y()
+			# x2, y2 = self.frameGeometry().bottomRight().x(), self.frameGeometry().bottomRight().y()
+			x1, y1, x2, y2 = 0, 0, 642, 488
 			if x1 <= self.p1.x and y1 <= self.p1.y and x2 >= self.p2.x and y2 >= self.p2.y:
 				cv2.rectangle(image_data, (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), self._red, self._width)
 
@@ -85,18 +80,13 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 		self.update()
 
 	def mousePressEvent(self, event):
-		# self.p1.x = int(event.x()*self.height_shearing)
-		# self.p1.y = int(event.y()*self.width_shearing)
-		self.p1.x = event.x()+100
-		self.p1.y = event.y()+100
-
+		self.p1.x = int(event.x() / self.height_shearing)  # + 9
+		self.p1.y = int(event.y() / self.width_shearing)  # + 9
 		self.drawing = False
 
 	def mouseReleaseEvent(self, event):
-		# self.p2.x = int(event.x()*self.height_shearing)
-		# self.p2.y = int(event.y()*self.width_shearing)
-		self.p2.x = event.x()
-		self.p2.y = event.y()
+		self.p2.x = int(event.x() / self.height_shearing)
+		self.p2.y = int(event.y() / self.width_shearing)
 		self.drawing = True
 
 # TODO: cooridnates within frame
