@@ -30,9 +30,6 @@ class MainWidget(QtWidgets.QWidget):
 		self.search_button = QtWidgets.QPushButton('Search')
 		self.layout_buttons.addWidget(self.search_button, 0, QtCore.Qt.AlignLeft)
 
-		# self.add_button.clicked.connect(self.mousePressEvent(Qt.QEvent.MouseButtonPress))
-		# self.qle.textChanged[str].connect(self.onChanged)
-
 		self.layout_add = QtWidgets.QHBoxLayout()
 		self.add_button = QtWidgets.QPushButton('Add')
 		self.layout_add.addWidget(self.add_button, 0, QtCore.Qt.AlignLeft)
@@ -45,6 +42,10 @@ class MainWidget(QtWidgets.QWidget):
 		self.item_list = QtWidgets.QListWidget()
 		self.layout_buttons.addWidget(self.item_list, 0, QtCore.Qt.AlignLeft)
 
+		self.remove = QtWidgets.QPushButton('remove selected')
+		self.layout_buttons.addWidget(self.remove)
+
+		self.remove.clicked.connect(self.removeSelected)
 		self.add_button.clicked.connect(self.addItem)
 
 		self.string = "face detected"  # TODO: change it later
@@ -69,6 +70,12 @@ class MainWidget(QtWidgets.QWidget):
 
 	def addLog(self, text):
 		self.logs.addItem(text)
+
+	def removeSelected(self):
+		selected = self.item_list.selectedItems()
+		if selected == None: return
+		for item in selected:
+			self.item_list.takeItem(self.item_list.row(item))
 
 
 def main():
