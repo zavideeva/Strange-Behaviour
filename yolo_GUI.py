@@ -8,24 +8,19 @@ class MainWidget(QtWidgets.QWidget):
 		super().__init__(parent)
 
 		cam = cv2.VideoCapture("video.mp4")
-		for i in range(5):
-			ok, frame = cam.read()
+		ok, frame = cam.read()
 
 		r = cv2.selectROI("Tracking object", frame)
 		r1 = (int(r[0]), int(r[1]))
 		r2 = (int(r[0] + r[2]), int(r[1] + r[3]))
-		obj1 = TrackableObject(r, "Human")
+		obj1 = TrackableObject("Object", r)
 		obj1.init_tracker(frame)
 		cv2.rectangle(frame, r1, r2, (0, 255, 0), 2, 1)
 		b = cv2.selectROI("Borders", frame)
-		b1 = (int(b[0]), int(b[1]))
-		b2 = (int(b[0] + b[2]), int(b[1] + b[3]))
-		obj1.set_borders(b1 + b2)
-		obj1.set_cam_borders(cam)
+		obj1.set_borders(b)
 
 		self.object_detection_widget = ObjectDetectionWidget()
 		self.record_video = RecordVideo(cam, [obj1])
-
 
 		image_data_slot = self.object_detection_widget.image_data_slot
 		self.record_video.image_data.connect(image_data_slot)
@@ -44,8 +39,16 @@ class MainWidget(QtWidgets.QWidget):
 		# layout for buttons
 		self.layout_buttons = QtWidgets.QVBoxLayout()
 
+		self.layout_play = QtWidgets.QHBoxLayout()
+
+		self.play_button = QtWidgets.QPushButton('Play')
+		self.layout_play.addWidget(self.play_button, 0, QtCore.Qt.AlignLeft)
+		self.play_button.clicked.connect(self.play)
+
 		self.search_button = QtWidgets.QPushButton('Search')
-		self.layout_buttons.addWidget(self.search_button, 0, QtCore.Qt.AlignLeft)
+		self.layout_play.addWidget(self.search_button, 0, QtCore.Qt.AlignRight)
+
+		self.layout_buttons.addLayout(self.layout_play)
 
 		self.layout_add = QtWidgets.QHBoxLayout()
 		self.add_button = QtWidgets.QPushButton('Add')
@@ -94,6 +97,9 @@ class MainWidget(QtWidgets.QWidget):
 		for item in selected:
 			self.item_list.takeItem(self.item_list.row(item))
 
+	def play(self):
+		self.record_video.tracking = not self.record_video.tracking
+
 
 def main():
 	app = QtWidgets.QApplication(sys.argv)
@@ -110,5 +116,5 @@ def main():
 
 if __name__ == '__main__':
 	main()
-	# cam.release()
-	# cv2.destroyAllWindows()
+# cam.release()
+# cv2.destroyAllWindows()

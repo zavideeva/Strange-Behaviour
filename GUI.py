@@ -11,14 +11,16 @@ class RecordVideo(QtCore.QObject):
 		self.camera = camera
 
 		self.timer = QtCore.QBasicTimer()
-
+		self.tracking = False
 		self.objects = objects
+		self.last_frame = 255 * np.ones((1000, 1000, 3), np.uint8)
 
 	def start_recording(self):
 		self.timer.start(0, self)
 
 	def timerEvent(self, event):
-		if event.timerId() != self.timer.timerId():
+		if not self.tracking:  # event.timerId() != self.timer.timerId() or
+			self.image_data.emit(self.last_frame)
 			return
 
 		read, img = self.camera.read()
@@ -26,26 +28,26 @@ class RecordVideo(QtCore.QObject):
 			for i in range(len(self.objects)):
 				upd, obj = self.objects[i].tracker.update(img)
 				if upd:
-					self.objects[i].detect_obj(True)
 					x1 = (int(obj[0]), int(obj[1]))
 					x2 = (int(obj[0] + obj[2]), int(obj[1] + obj[3]))
 					self.objects[i].coords = x1 + x2
-					if self.objects[i].borders and not self.objects[i].is_object_inside_borders():
+					if self.objects[i].borders and not self.objects[i].is_object_inside():
 						print("WARNING: OBJECT IS OUTSIDE OF BORDERS")
+						print("Borders: ", self.objects[i].borders)
+						print("Coord: ", self.objects[i].coords)
 					cv2.rectangle(img, x1, x2, (255, 0, 0), 2, 1)
 					cv2.putText(img, self.objects[i].name, get_first_point(self.objects[i].coords),
-								cv2.FONT_HERSHEY_COMPLEX_SMALL, 1,
-								(255, 255, 255))
+								cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 255))
 					if self.objects[i].borders:
 						cv2.rectangle(img, get_first_point(self.objects[i].borders),
 									  get_second_point(self.objects[i].borders),
 									  (0, 255, 0), 2, 1)
-					if not self.objects[i].is_object_inside_cam_borders():
-						print("WARNING: OBJECT IS OUTSIDE THE CAMERA VIEW")
 				else:
 					self.objects[i].detect_obj(False)
 			# cv2.imshow("Track object", img)
-			self.image_data.emit(img)
+			self.last_frame = img
+
+		self.image_data.emit(self.last_frame)
 
 
 class ObjectDetectionWidget(QtWidgets.QWidget):
@@ -116,28 +118,24 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 
 # TODO: cooridnates within frame
 
-
 class TrackableObject:
+	"""
+	Class which
+	"""
 	tracker = None
 	borders = None
-	cam_borders = None
 	object_not_found = 0
 
-	def __init__(self, coords, name='Object'):
+	def __init__(self, name='Object', coords=None):
 		self.name = name
 		self.coords = tuple(coords)
 
 	def init_tracker(self, image):
-		self.tracker = create_tracker(4)
+		self.tracker = create_tracker(1)
 		init_track = self.tracker.init(image, self.coords)
 
-	def is_object_inside_borders(self):
+	def is_object_inside(self):
 		b_x1, b_y1, b_x2, b_y2 = self.borders
-		x1, y1, x2, y2 = self.coords
-		return (b_x1 < x1) and (b_y1 < y1) and (x2 < b_x2) and (y2 < b_y2)
-
-	def is_object_inside_cam_borders(self):
-		b_x1, b_y1, b_x2, b_y2 = self.cam_borders
 		x1, y1, x2, y2 = self.coords
 		return (b_x1 < x1) and (b_y1 < y1) and (x2 < b_x2) and (y2 < b_y2)
 
@@ -146,16 +144,12 @@ class TrackableObject:
 			self.object_not_found += 1
 		else:
 			self.object_not_found = 0
-		if self.object_not_found > 20:
-			print("WARNING:{} IS NOT FOUND!!!".format(self.name))
+
+	# if self.object_not_found > 5:
+	#     print("WARNING:{} IS NOT FOUND!!!".format(self.name))
 
 	def set_borders(self, coords):
-		self.borders = coords
-
-	def set_cam_borders(self, camera):
-		width = camera.get(cv2.CAP_PROP_FRAME_WIDTH)
-		height = camera.get(cv2.CAP_PROP_FRAME_HEIGHT)
-		self.cam_borders = (0, 0, width, height)
+		self.borders = (coords[0], coords[1], coords[0] + coords[2], coords[1] + coords[3])
 
 
 def create_tracker(index):
@@ -186,8 +180,8 @@ def create_tracker(index):
 
 def init_obj_detection(objects_map, img):
 	objects = []
-	for key in objects_map:
-		obj = TrackableObject(objects_map[key], key)
+	for coco_object in objects_map:
+		obj = TrackableObject(coco_object.name, coco_object.coords)
 		obj.init_tracker(img)
 		objects.append(obj)
 	return objects
@@ -199,7 +193,6 @@ def get_first_point(coords):
 
 def get_second_point(coords):
 	return coords[2], coords[3]
-
 
 # def detect(object_map, camera, img):
 # 	objs = init_obj_detection(object_map, img)
