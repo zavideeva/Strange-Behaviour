@@ -5,15 +5,17 @@ import numpy as np
 
 class RecordVideo(QtCore.QObject):
 	image_data = QtCore.pyqtSignal(np.ndarray)
+	text_signal = QtCore.pyqtSignal([str])
 
-	def __init__(self, camera=0, objects=None, parent=None):
+	def __init__(self, camera=0, parent=None):  # , [obj1]
 		super().__init__(parent)
 		self.camera = camera
 
 		self.timer = QtCore.QBasicTimer()
 		self.tracking = False
-		self.objects = objects
+		self.objects = None
 		self.last_frame = 255 * np.ones((1000, 1000, 3), np.uint8)
+		self.isDetected = False
 
 	def start_recording(self):
 		self.timer.start(0, self)
@@ -25,32 +27,35 @@ class RecordVideo(QtCore.QObject):
 
 		read, img = self.camera.read()
 		if read:
-			for i in range(len(self.objects)):
-				upd, obj = self.objects[i].tracker.update(img)
-				if upd:
-					x1 = (int(obj[0]), int(obj[1]))
-					x2 = (int(obj[0] + obj[2]), int(obj[1] + obj[3]))
-					self.objects[i].coords = x1 + x2
-					if self.objects[i].borders and not self.objects[i].is_object_inside():
-						print("WARNING: OBJECT IS OUTSIDE OF BORDERS")
-						print("Borders: ", self.objects[i].borders)
-						print("Coord: ", self.objects[i].coords)
-					cv2.rectangle(img, x1, x2, (255, 0, 0), 2, 1)
-					cv2.putText(img, self.objects[i].name, get_first_point(self.objects[i].coords),
-								cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 255))
-					if self.objects[i].borders:
-						cv2.rectangle(img, get_first_point(self.objects[i].borders),
-									  get_second_point(self.objects[i].borders),
-									  (0, 255, 0), 2, 1)
-				else:
-					self.objects[i].detect_obj(False)
-			# cv2.imshow("Track object", img)
+			if self.isDetected:
+				self.detect(img)
 			self.last_frame = img
-
 		self.image_data.emit(self.last_frame)
 
+	def detect(self, img):
+		for i in range(len(self.objects)):
+			upd, obj = self.objects[i].tracker.update(img)
+			if upd:
+				x1 = (int(obj[0]), int(obj[1]))
+				x2 = (int(obj[0] + obj[2]), int(obj[1] + obj[3]))
+				self.objects[i].coords = x1 + x2
+				if self.objects[i].borders and not self.objects[i].is_object_inside():
+					self.text_signal.emit("WARNING: OBJECT IS OUTSIDE OF BORDERS")
+					self.text_signal.emit("Borders: ", self.objects[i].borders)
+					self.text_signal.emit("Coord: ", self.objects[i].coords)
+				cv2.rectangle(img, x1, x2, (255, 0, 0), 2, 1)
+				cv2.putText(img, self.objects[i].name, get_first_point(self.objects[i].coords),
+							cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 255))
+				if self.objects[i].borders:
+					cv2.rectangle(img, get_first_point(self.objects[i].borders),
+								  get_second_point(self.objects[i].borders),
+								  (0, 255, 0), 2, 1)
+			else:
+				self.objects[i].detect_obj(False)
 
-class ObjectDetectionWidget(QtWidgets.QWidget):
+
+class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
+	coordinates_signal = QtCore.pyqtSignal(int, int, int, int)
 	class Point():
 		def __init__(self):
 			self.x = 0
@@ -72,19 +77,16 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 		self.height_shearing = 1
 		self.width_shearing = 1
 
-	def calculate_shearing(self):
-		self.height_shearing = self.frameGeometry().width() / 642
-		self.width_shearing = self.frameGeometry().height() / 488
-
 	def image_data_slot(self, image_data):
-		self.calculate_shearing()
 		if self.drawing:
 			# for (x, y, w, h) in faces: #TODO: add ability to draw many rectangles by storing coordinates in list
-			x1, y1, x2, y2 = 0, 0, 642, 488
+			x1, y1, x2, y2 = 0, 0, self.size().width(), self.size().height()
 			if x1 <= self.p1.x and y1 <= self.p1.y and x2 >= self.p2.x and y2 >= self.p2.y:
 				cv2.rectangle(image_data, (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), self._red, self._width)
 
 		self.image = self.get_qimage(image_data)
+		self.height_shearing = self.image.size().height() / self.size().height()
+		self.width_shearing = self.image.size().width() / self.size().width()
 		self.update()
 
 	def get_qimage(self, image: np.ndarray):
@@ -106,15 +108,15 @@ class ObjectDetectionWidget(QtWidgets.QWidget):
 		self.update()
 
 	def mousePressEvent(self, event):
-		self.p1.x = int(event.x() / self.height_shearing)  # + 9
-		self.p1.y = int(event.y() / self.width_shearing)  # + 9
+		self.p1.x = int(event.x() * self.width_shearing)
+		self.p1.y = int(event.y() * self.height_shearing)
 		self.drawing = False
 
 	def mouseReleaseEvent(self, event):
-		self.p2.x = int(event.x() / self.height_shearing)
-		self.p2.y = int(event.y() / self.width_shearing)
+		self.p2.x = int(event.x() * self.width_shearing)
+		self.p2.y = int(event.y() * self.height_shearing)
 		self.drawing = True
-
+		self.coordinates_signal.emit(self.p1.x, self.p1.y, self.p2.x, self.p2.y)
 
 # TODO: cooridnates within frame
 

@@ -3,27 +3,31 @@ from GUI import *
 from PyQt5 import QtWidgets, QtCore
 
 
+# ok, frame = cam.read()
+#
+# r = cv2.selectROI("Tracking object", frame)
+# r1 = (int(r[0]), int(r[1]))
+# r2 = (int(r[0] + r[2]), int(r[1] + r[3]))
+# obj1 = TrackableObject("Object", r)
+# obj1.init_tracker(frame)
+# cv2.rectangle(frame, r1, r2, (0, 255, 0), 2, 1)
+# b = cv2.selectROI("Borders", frame)
+# obj1.set_borders(b)
+
 class MainWidget(QtWidgets.QWidget):
 	def __init__(self, parent=None):
+
 		super().__init__(parent)
 
 		cam = cv2.VideoCapture("video.mp4")
-		ok, frame = cam.read()
-
-		r = cv2.selectROI("Tracking object", frame)
-		r1 = (int(r[0]), int(r[1]))
-		r2 = (int(r[0] + r[2]), int(r[1] + r[3]))
-		obj1 = TrackableObject("Object", r)
-		obj1.init_tracker(frame)
-		cv2.rectangle(frame, r1, r2, (0, 255, 0), 2, 1)
-		b = cv2.selectROI("Borders", frame)
-		obj1.set_borders(b)
-
 		self.object_detection_widget = ObjectDetectionWidget()
-		self.record_video = RecordVideo(cam, [obj1])
+		self.object_detection_widget.coordinates_signal.connect(self.coordinates)
+		self.record_video = RecordVideo(cam)  # , [obj1]
 
 		image_data_slot = self.object_detection_widget.image_data_slot
 		self.record_video.image_data.connect(image_data_slot)
+
+		self.record_video.text_signal.connect(self.addLog)
 		self.record_video.start_recording()
 
 		# main layouts
@@ -53,7 +57,7 @@ class MainWidget(QtWidgets.QWidget):
 		self.layout_add = QtWidgets.QHBoxLayout()
 		self.add_button = QtWidgets.QPushButton('Add')
 		self.layout_add.addWidget(self.add_button, 0, QtCore.Qt.AlignLeft)
-
+		self.add_button.clicked.connect(self.detected)
 		self.qle = QtWidgets.QLineEdit(self)
 		self.layout_add.addWidget(self.qle)
 
@@ -90,6 +94,13 @@ class MainWidget(QtWidgets.QWidget):
 
 	def addLog(self, text):
 		self.logs.addItem(text)
+
+	def coordinates(self, x1, y1, x2, y2):
+		text = "p1.x:{} p1.y:{} p2.x:{} p2.y:{}".format(x1, y1, x2, y2)
+		self.addLog(text)
+
+	def detected(self):
+		self.object_detection_widget.isDetected = True
 
 	def removeSelected(self):
 		selected = self.item_list.selectedItems()
