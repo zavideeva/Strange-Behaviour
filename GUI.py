@@ -13,12 +13,15 @@ class RecordVideo(QtCore.QObject):
 
 		self.timer = QtCore.QBasicTimer()
 		self.tracking = False
-		self.objects = None
+		self.objects = list()
 		self.last_frame = 255 * np.ones((1000, 1000, 3), np.uint8)
 		self.isDetected = False
 
 	def start_recording(self):
 		self.timer.start(0, self)
+
+	def add_object(self, obj):
+		self.objects.append(obj)
 
 	def timerEvent(self, event):
 		if not self.tracking:  # event.timerId() != self.timer.timerId() or
@@ -33,6 +36,7 @@ class RecordVideo(QtCore.QObject):
 		self.image_data.emit(self.last_frame)
 
 	def detect(self, img):
+		print("hello")
 		for i in range(len(self.objects)):
 			upd, obj = self.objects[i].tracker.update(img)
 			if upd:
@@ -41,8 +45,8 @@ class RecordVideo(QtCore.QObject):
 				self.objects[i].coords = x1 + x2
 				if self.objects[i].borders and not self.objects[i].is_object_inside():
 					self.text_signal.emit("WARNING: OBJECT IS OUTSIDE OF BORDERS")
-					self.text_signal.emit("Borders: ", self.objects[i].borders)
-					self.text_signal.emit("Coord: ", self.objects[i].coords)
+					self.text_signal.emit("Borders: {}".format(self.objects[i].borders))
+					self.text_signal.emit("Coord: {}".format(self.objects[i].coords))
 				cv2.rectangle(img, x1, x2, (255, 0, 0), 2, 1)
 				cv2.putText(img, self.objects[i].name, get_first_point(self.objects[i].coords),
 							cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 255))
@@ -76,15 +80,16 @@ class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
 		self._width = 2
 		self.height_shearing = 1
 		self.width_shearing = 1
+		self.isDetected = False
 
 	def image_data_slot(self, image_data):
+		self.image = self.get_qimage(image_data)
 		if self.drawing:
 			# for (x, y, w, h) in faces: #TODO: add ability to draw many rectangles by storing coordinates in list
 			x1, y1, x2, y2 = 0, 0, self.size().width(), self.size().height()
 			if x1 <= self.p1.x and y1 <= self.p1.y and x2 >= self.p2.x and y2 >= self.p2.y:
 				cv2.rectangle(image_data, (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), self._red, self._width)
 
-		self.image = self.get_qimage(image_data)
 		self.height_shearing = self.image.size().height() / self.size().height()
 		self.width_shearing = self.image.size().width() / self.size().width()
 		self.update()
@@ -108,6 +113,7 @@ class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
 		self.update()
 
 	def mousePressEvent(self, event):
+		self.isDetected = False
 		self.p1.x = int(event.x() * self.width_shearing)
 		self.p1.y = int(event.y() * self.height_shearing)
 		self.drawing = False
@@ -117,6 +123,8 @@ class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
 		self.p2.y = int(event.y() * self.height_shearing)
 		self.drawing = True
 		self.coordinates_signal.emit(self.p1.x, self.p1.y, self.p2.x, self.p2.y)
+
+
 
 # TODO: cooridnates within frame
 
