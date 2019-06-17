@@ -23,20 +23,24 @@ class RecordVideo(QtCore.QObject):
 	def add_object(self, obj):
 		self.objects.append(obj)
 
+	def removeObject(self, text):
+		for item in self.objects:
+			if item.name == text:
+				self.objects.remove(item)
+
 	def timerEvent(self, event):
-		if not self.tracking:  # event.timerId() != self.timer.timerId() or
+		if not self.tracking and not self.isDetected:  # event.timerId() != self.timer.timerId() or
 			self.image_data.emit(self.last_frame)
 			return
 
 		read, img = self.camera.read()
 		if read:
-			if self.isDetected:
-				self.detect(img)
+			# if self.isDetected:
+			self.detect(img)
 			self.last_frame = img
 		self.image_data.emit(self.last_frame)
 
 	def detect(self, img):
-		print("hello")
 		for i in range(len(self.objects)):
 			upd, obj = self.objects[i].tracker.update(img)
 			if upd:
@@ -50,16 +54,17 @@ class RecordVideo(QtCore.QObject):
 				cv2.rectangle(img, x1, x2, (255, 0, 0), 2, 1)
 				cv2.putText(img, self.objects[i].name, get_first_point(self.objects[i].coords),
 							cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 255, 255))
-				if self.objects[i].borders:
-					cv2.rectangle(img, get_first_point(self.objects[i].borders),
-								  get_second_point(self.objects[i].borders),
-								  (0, 255, 0), 2, 1)
+			# if self.objects[i].borders:
+			# 	cv2.rectangle(img, get_first_point(self.objects[i].borders),
+			# 				  get_second_point(self.objects[i].borders),
+			# 				  (0, 255, 0), 2, 1)
 			else:
 				self.objects[i].detect_obj(False)
 
 
 class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
 	coordinates_signal = QtCore.pyqtSignal(int, int, int, int)
+
 	class Point():
 		def __init__(self):
 			self.x = 0
@@ -75,24 +80,40 @@ class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
 		self.image = QtGui.QImage()
 		self.p1 = self.Point()
 		self.p2 = self.Point()
+		self.border_p1 = self.Point()
+		self.border_p2 = self.Point()
 		self.drawing = False
 		self._red = (0, 0, 255)
+		self._green = (0, 255, 0)
 		self._width = 2
 		self.height_shearing = 1
 		self.width_shearing = 1
 		self.isDetected = False
+		self.imageCV = None
+		self.isTarget = True
 
 	def image_data_slot(self, image_data):
+		self.imageCV = image_data
 		self.image = self.get_qimage(image_data)
 		if self.drawing:
-			# for (x, y, w, h) in faces: #TODO: add ability to draw many rectangles by storing coordinates in list
-			x1, y1, x2, y2 = 0, 0, self.size().width(), self.size().height()
-			if x1 <= self.p1.x and y1 <= self.p1.y and x2 >= self.p2.x and y2 >= self.p2.y:
-				cv2.rectangle(image_data, (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), self._red, self._width)
+			if self.isTarget:
+				self.drawTarget(image_data)
+			else:
+				self.drawBorder(image_data)
 
 		self.height_shearing = self.image.size().height() / self.size().height()
 		self.width_shearing = self.image.size().width() / self.size().width()
 		self.update()
+
+	def drawTarget(self, image_data):
+		x1, y1, x2, y2 = 0, 0, self.size().width(), self.size().height()
+		# if x1 <= self.p1.x and y1 <= self.p1.y and x2 >= self.p2.x and y2 >= self.p2.y:
+		cv2.rectangle(image_data, (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), self._red, self._width)
+
+	def drawBorder(self, image_data):
+		x1, y1, x2, y2 = 0, 0, self.size().width(), self.size().height()
+		# if x1 <= self.border_p1.x and y1 <= self.border_p1.y and x2 >= self.border_p2.x and y2 >= self.border_p2.y:
+		cv2.rectangle(image_data, (self.border_p1.x, self.border_p1.y), (self.border_p2.x, self.border_p2.y), self._green, self._width)
 
 	def get_qimage(self, image: np.ndarray):
 		height, width, colors = image.shape
@@ -114,19 +135,35 @@ class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
 
 	def mousePressEvent(self, event):
 		self.isDetected = False
-		self.p1.x = int(event.x() * self.width_shearing)
-		self.p1.y = int(event.y() * self.height_shearing)
+		# TODO: change isTarget is isNotTarget
+		if not self.isTarget:
+			self.p1.x = int(event.x() * self.width_shearing)
+			self.p1.y = int(event.y() * self.height_shearing)
+		else:
+			self.border_p1.x = int(event.x() * self.width_shearing)
+			self.border_p1.y = int(event.y() * self.height_shearing)
 		self.drawing = False
 
 	def mouseReleaseEvent(self, event):
-		self.p2.x = int(event.x() * self.width_shearing)
-		self.p2.y = int(event.y() * self.height_shearing)
+		if not self.isTarget:
+			self.p2.x = int(event.x() * self.width_shearing)
+			self.p2.y = int(event.y() * self.height_shearing)
+			self.coordinates_signal.emit(self.p1.x, self.p1.y, self.p2.x, self.p2.y)
+		else:
+			self.border_p2.x = int(event.x() * self.width_shearing)
+			self.border_p2.y = int(event.y() * self.height_shearing)
+			self.coordinates_signal.emit(self.border_p1.x, self.border_p1.y, self.border_p2.x, self.border_p2.y)
 		self.drawing = True
-		self.coordinates_signal.emit(self.p1.x, self.p1.y, self.p2.x, self.p2.y)
-
-
-
-# TODO: cooridnates within frame
+		self.isTarget = not self.isTarget
+#
+# class LogWidget(QtCore.QObject, QtWidgets.QWidget):#TODO: create log widget
+# 	def __init__(self, parent=None):
+# 		super().__init__(parent)
+# 		self.text = ""
+#
+# 	def addText(self, text):
+# 		self.text = text
+#
 
 class TrackableObject:
 	"""
