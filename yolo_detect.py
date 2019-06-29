@@ -3,22 +3,28 @@ import argparse
 import cv2
 import os
 import detect_object
+import time
 
-MIN_PROB = 0.4
+MIN_PROB = 0.1
 OVERLAP_THRESHHOLD = 0.2
 
 
+class CocoObject:
+    def __init__(self, name, coords):
+        self.name = name
+        self.coords = coords
+
+
 def find_electric_objects(yolo_directory_path, min_prob, overlap_threshhold, image):
-    '''
-    Returns map of detected objects
-    key   - object name
-    value - list of coordinates
-    :param img_path:
+    """
     :param yolo_directory_path:
     :param min_prob:
     :param overlap_threshhold:
-    :return:
-    '''
+    :param image: np array
+    :return: list of detected CocoObjects, where
+                key   - object name
+                value - list of coordinates
+    """
     labelsPath = os.path.sep.join([yolo_directory_path, "coco.names"])
     LABELS = open(labelsPath).read().strip().split("\n")
 
@@ -27,7 +33,6 @@ def find_electric_objects(yolo_directory_path, min_prob, overlap_threshhold, ima
 
 
     net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
-    #image = cv2.imread(img_path)
     (H, W) = image.shape[:2]
 
     ln = net.getLayerNames()
@@ -48,8 +53,7 @@ def find_electric_objects(yolo_directory_path, min_prob, overlap_threshhold, ima
             scores = detection[5:]
             classID = np.argmax(scores)
             confidence = scores[classID]
-            #LABELS[classID] in electric_things and
-            if confidence > MIN_PROB:
+            if confidence > MIN_PROB and LABELS[classID] in electric_things:
                 box = detection[0:4] * np.array([W, H, W, H])
                 (centerX, centerY, width, height) = box.astype("int")
 
@@ -62,21 +66,30 @@ def find_electric_objects(yolo_directory_path, min_prob, overlap_threshhold, ima
 
     idxs = cv2.dnn.NMSBoxes(boxes, confidences, min_prob, overlap_threshhold)
 
-    names_and_coords = {}
+    names_and_coords = []
     if len(idxs) > 0:
         for i in idxs.flatten():
             x, y = boxes[i][0], boxes[i][1]
             w, h = boxes[i][2], boxes[i][3]
-            names_and_coords[LABELS[classIDs[i]]] = (x,y,w,h)
+            names_and_coords.append(CocoObject(LABELS[classIDs[i]], (x,y,w,h)))
 
     return names_and_coords
 
 
 if __name__ == '__main__':
-    img_path = 'OneStopMoveEnter1cor.mpg'
+    img_path = 'videos/walk360.mp4'
     cam = cv2.VideoCapture(img_path)
     ok, image = cam.read()
-    obmap = find_electric_objects('yolo-coco', MIN_PROB, OVERLAP_THRESHHOLD, image)
 
-    detect_object.detect(obmap, cam, image)
+    start = time.time()
+    coco_objects = find_electric_objects('yolo-coco', MIN_PROB, OVERLAP_THRESHHOLD, image)
+    end = time.time()
+    print("[INFO] YOLO took {:.6f} seconds".format(end - start))
+    print(coco_objects)
+    print(len(coco_objects))
+    for coco_object in coco_objects:
+        coords = coco_object.coords
+        cv2.rectangle(image, (coords[0], coords[1]), (coords[0] + coords[2], coords[1] + coords[3]), (0, 255, 0))
+    detect_object.detect(coco_objects, cam, image)
+
 
