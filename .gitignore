@@ -2,3 +2,5 @@
 venv
 images
 *.mpg
+object_detection
+videos
