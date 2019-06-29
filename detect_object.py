@@ -2,9 +2,6 @@ import cv2
 
 
 class TrackableObject:
-    """
-    Class which
-    """
     tracker = None
     borders = None
     object_not_found = 0
