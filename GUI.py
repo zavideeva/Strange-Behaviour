@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 import cv2
 import numpy as np
-
+import yolo_detect
 
 class RecordVideo(QtCore.QObject):
 	image_data = QtCore.pyqtSignal(np.ndarray)
@@ -16,6 +16,7 @@ class RecordVideo(QtCore.QObject):
 		self.objects = list()
 		self.last_frame = 255 * np.ones((1000, 1000, 3), np.uint8)
 		self.isDetected = False
+		self.yolo_detect = False
 
 	def start_recording(self):
 		self.timer.start(0, self)
@@ -35,10 +36,26 @@ class RecordVideo(QtCore.QObject):
 
 		read, img = self.camera.read()
 		if read:
-			# if self.isDetected:
+			if self.yolo_detect:
+				self.yolo_detect = False
+				self.yolo(img)
+				# 	self.tracking = False
+
 			self.detect(img)
 			self.last_frame = img
 		self.image_data.emit(self.last_frame)
+
+	def yolo(self, image):
+		start = yolo_detect.time.time()
+		coco_objects = yolo_detect.find_electric_objects('yolo-coco',
+														 yolo_detect.MIN_PROB,
+														 yolo_detect.OVERLAP_THRESHHOLD, image)
+		end = yolo_detect.time.time()
+		for coco_object in coco_objects:
+			coords = coco_object.coords
+			cv2.rectangle(image, (coords[0], coords[1]), (coords[0] + coords[2], coords[1] + coords[3]), (0, 255, 0))
+		self.objects = self.objects + init_obj_detection(coco_objects, image)
+
 
 	def detect(self, img):
 		for i in range(len(self.objects)):
@@ -48,7 +65,7 @@ class RecordVideo(QtCore.QObject):
 				x2 = (int(obj[0] + obj[2]), int(obj[1] + obj[3]))
 				self.objects[i].coords = x1 + x2
 				if self.objects[i].borders and not self.objects[i].is_object_inside():
-					self.text_signal.emit("WARNING: OBJECT IS OUTSIDE OF BORDERS")
+					self.text_signal.emit("WARNING: OBJECT IS OUTSIDE OF BORDERS")  # TODO: add time variable
 					self.text_signal.emit("Borders: {}".format(self.objects[i].borders))
 					self.text_signal.emit("Coord: {}".format(self.objects[i].coords))
 				cv2.rectangle(img, x1, x2, (255, 0, 0), 2, 1)
@@ -64,6 +81,7 @@ class RecordVideo(QtCore.QObject):
 
 class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
 	coordinates_signal = QtCore.pyqtSignal(int, int, int, int)
+	coordinates_signal_b = QtCore.pyqtSignal(int, int, int, int)
 
 	class Point():
 		def __init__(self):
@@ -106,14 +124,11 @@ class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
 		self.update()
 
 	def drawTarget(self, image_data):
-		x1, y1, x2, y2 = 0, 0, self.size().width(), self.size().height()
-		# if x1 <= self.p1.x and y1 <= self.p1.y and x2 >= self.p2.x and y2 >= self.p2.y:
 		cv2.rectangle(image_data, (self.p1.x, self.p1.y), (self.p2.x, self.p2.y), self._red, self._width)
 
 	def drawBorder(self, image_data):
-		x1, y1, x2, y2 = 0, 0, self.size().width(), self.size().height()
-		# if x1 <= self.border_p1.x and y1 <= self.border_p1.y and x2 >= self.border_p2.x and y2 >= self.border_p2.y:
-		cv2.rectangle(image_data, (self.border_p1.x, self.border_p1.y), (self.border_p2.x, self.border_p2.y), self._green, self._width)
+		cv2.rectangle(image_data, (self.border_p1.x, self.border_p1.y), (self.border_p2.x, self.border_p2.y),
+					  self._green, self._width)
 
 	def get_qimage(self, image: np.ndarray):
 		height, width, colors = image.shape
@@ -152,18 +167,10 @@ class ObjectDetectionWidget(QtWidgets.QWidget, QtCore.QObject):
 		else:
 			self.border_p2.x = int(event.x() * self.width_shearing)
 			self.border_p2.y = int(event.y() * self.height_shearing)
-			self.coordinates_signal.emit(self.border_p1.x, self.border_p1.y, self.border_p2.x, self.border_p2.y)
+			self.coordinates_signal_b.emit(self.border_p1.x, self.border_p1.y, self.border_p2.x, self.border_p2.y)
 		self.drawing = True
 		self.isTarget = not self.isTarget
-#
-# class LogWidget(QtCore.QObject, QtWidgets.QWidget):#TODO: create log widget
-# 	def __init__(self, parent=None):
-# 		super().__init__(parent)
-# 		self.text = ""
-#
-# 	def addText(self, text):
-# 		self.text = text
-#
+
 
 class TrackableObject:
 	"""
