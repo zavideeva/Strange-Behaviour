@@ -4,7 +4,6 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QFile, QTextStream
 import cv2
 
-
 class MainWidget(QtWidgets.QWidget):
 
 	def __init__(self, parent=None):
@@ -14,12 +13,18 @@ class MainWidget(QtWidgets.QWidget):
 		self.x2 = None
 		self.y2 = None
 
+		self.x1_b = None
+		self.y1_b = None
+		self.x2_b = None
+		self.y2_b = None
+
 		#  Video Source
-		cam = cv2.VideoCapture("video.mp4")
+		cam = cv2.VideoCapture("dataset/laptop_track1.mp4")
 
 		#  Create object detection widget and record video object
 		self.object_detection_widget = ObjectDetectionWidget()
 		self.record_video = RecordVideo(cam)
+
 		#  layouts
 		self.layout_main = QtWidgets.QVBoxLayout()
 		self.layout_cam = QtWidgets.QHBoxLayout()
@@ -44,14 +49,14 @@ class MainWidget(QtWidgets.QWidget):
 		self.remove.setStyleSheet("font-size:11px;background-color:#999999; border: 2px solid #222222")
 		self.remove.setFixedSize(100, 20)
 
-		# pass
+		# Widget allocation
 		self.qle = QtWidgets.QLineEdit(self)
 		self.item_list = QtWidgets.QListWidget()
 		self.logs = QtWidgets.QListWidget()
 		self.label = QtWidgets.QLabel()
 
 		self.layout_cam.addWidget(self.object_detection_widget)
-		self.layout_up.addLayout(self.layout_cam, stretch=4)  # TODO: try stretch =5
+		self.layout_up.addLayout(self.layout_cam, stretch=5)  # TODO: try stretch =5
 		self.layout_buttons.addLayout(self.layout_play)
 
 		self.layout_play.addWidget(self.play_button)  # , 0, QtCore.Qt.AlignLeft
@@ -62,9 +67,6 @@ class MainWidget(QtWidgets.QWidget):
 		self.layout_buttons.addLayout(self.layout_add)
 		self.layout_buttons.addWidget(self.item_list, 0, QtCore.Qt.AlignLeft)
 
-
-
-
 		self.layout_up.addLayout(self.layout_buttons, stretch=1)
 		self.layout_main.addLayout(self.layout_up, stretch=3)
 
@@ -73,14 +75,16 @@ class MainWidget(QtWidgets.QWidget):
 		# signal connection of widgets
 		image_data_slot = self.object_detection_widget.image_data_slot
 		self.object_detection_widget.coordinates_signal.connect(self.set_coordinates)
+		self.object_detection_widget.coordinates_signal_b.connect(self.set_coordinates_b)
 		self.record_video.image_data.connect(image_data_slot)
-		# self.record_video.image_data.connect(self.create_object)
+		self.record_video.image_data.connect(self.create_object)
 		self.record_video.text_signal.connect(self.addLog)
 		self.record_video.start_recording()
 
 		# connection button with signal
 		self.play_button.clicked.connect(self.play)
 		self.add_button.clicked.connect(self.detected)
+		self.search_button.clicked.connect(self.yolo_detect)
 		self.remove.clicked.connect(self.removeSelected)
 		self.add_button.clicked.connect(self.addItem)
 
@@ -89,27 +93,32 @@ class MainWidget(QtWidgets.QWidget):
 	# add new item to list
 
 	def create_object(self, frame):
-		if self.record_video.isDetected and self.x1 is not None:
-			# print("I am here")
-			r1 = self.x1, self.y1
-			r2 = self.x2, self.y2
+		if self.record_video.isDetected and self.x1_b is not None:
 			r = (self.x1, self.y1, int(self.x2 - self.x1), int(self.y2 - self.y1))
 			obj1 = TrackableObject(self.qle.text(), r)
 			obj1.init_tracker(frame)
-			# cv2.imshow('title', frame)
-			# b = cv2.selectROI("Borders", frame)
-			obj1.set_borders(r)
+			b = (self.x1_b, self.y1_b, int(self.x2_b - self.x1_b), int(self.y2_b - self.y1_b))
+			obj1.set_borders(b)
 			self.record_video.add_object(obj1)
 
 			self.record_video.isDetected = False
 
 	# cv2.rectangle(frame, r1, r2, (0, 255, 0), 2, 1)
 
+	def yolo_detect(self):
+		self.record_video.yolo_detect = not self.record_video.yolo_detect
+
 	def set_coordinates(self, x1, y1, x2, y2):
 		self.x1 = x1
 		self.y1 = y1
 		self.x2 = x2
 		self.y2 = y2
+
+	def set_coordinates_b(self, x1, y1, x2, y2):
+		self.x1_b = x1
+		self.y1_b = y1
+		self.x2_b = x2
+		self.y2_b = y2
 
 	def addLog(self, text):
 		self.logs.addItem(text)
