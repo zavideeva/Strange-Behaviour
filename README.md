@@ -8,34 +8,24 @@ These instructions will get you a copy of the project up and running on your loc
 
 What things you need to install the software and how to install them
 
-```
-Give examples
-```
+
 
 ### Installing
 
 A step by step series of examples that tell you how to get a development env running
 
-Say what the step will be
 
-```
-Give the example
-```
 
-And repeat
-
-```
-until finished
-```
 
 End with an example of getting some data out of the system or using it for a little demo
 
 ## Usage:
-    To start/stop a video press 'Play'.
-    To run yolo to find objects press 'Search', later press 'Play'.
-    To add new object to list of tracking items, firstly, select boundaries for object. Secondly, select object itself. Lastly add name in 
-    text label and press 'Add'.
-    To remove object from tracking items press item name in object list, press 'Remove'
+![main menu](https://github.com/zavideeva/Strange-Behaviour/blob/master/main_menu.jpg)
+To start/stop a video press 'Play'.
+To run yolo to find objects press 'Search', later press 'Play'.
+To add new object to list of tracking items, firstly, select boundaries for object. Secondly, select object itself. Lastly add name in 
+text label and press 'Add'.
+To remove object from tracking items press item name in object list, press 'Remove'
     
 ## Built With
 
