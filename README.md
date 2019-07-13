@@ -27,19 +27,20 @@ End with an example of getting some data out of the system or using it for a lit
 # This is how it displayed:
 # [video started](https://github.com/zavideeva/Strange-Behaviour/blob/master/video_started.jpg)
 
-# To run yolo to find objects press 'Search', later press 'Play'.
+## To run yolo to find objects press 'Search', later press 'Play'.
 # [search]()
 
 
 To add new object to list of tracking items, firstly, select boundaries for object. 
-[select boundaries](https://github.com/zavideeva/Strange-Behaviour/blob/master/select_boundaries.jpg)
+[select boundaries](https://github.com/zavideeva/Strange-Behaviour/blob/master/set_border.jpg)
 Secondly, select object itself. 
 [select target](https://github.com/zavideeva/Strange-Behaviour/blob/master/select_target.jpg)
 Lastly add name in text label and press 'Add'.
 [add name](https://github.com/zavideeva/Strange-Behaviour/blob/master/add_name.jpg)
-
-To remove object from tracking items press item name in object list, press 'Remove'
-[remove target](https://github.com/zavideeva/Strange-Behaviour/blob/master/remove_target.jpg)
+Object tracking: targets rounded by blue square
+[target detected](https://github.com/zavideeva/Strange-Behaviour/blob/master/target_detected.jpg)
+To remove object from tracking items press item's name in object list, press 'Remove'
+[remove target](https://github.com/zavideeva/Strange-Behaviour/blob/master/remove_selected.jpg)
 
 ## Built With
 PyQt5
