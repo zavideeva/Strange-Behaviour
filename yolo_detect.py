@@ -8,6 +8,10 @@ import time
 MIN_PROB = 0.1
 OVERLAP_THRESHHOLD = 0.2
 
+"""
+All weights and mappings can be found at https://pjreddie.com/darknet/yolo/
+"""
+
 
 class CocoObject:
     def __init__(self, name, coords):
