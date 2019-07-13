@@ -20,15 +20,23 @@ A step by step series of examples that tell you how to get a development env run
 End with an example of getting some data out of the system or using it for a little demo
 
 ## Usage:
-![main menu](https://github.com/zavideeva/Strange-Behaviour/blob/master/main_menu.jpg)
-To start/stop a video press 'Play'.
-To run yolo to find objects press 'Search', later press 'Play'.
-To add new object to list of tracking items, firstly, select boundaries for object. Secondly, select object itself. Lastly add name in 
+
+# To start/stop a video press 'Play'.
+# [main menu](https://github.com/zavideeva/Strange-Behaviour/blob/master/main_menu.jpg)
+
+# This is how it displayed:
+# [video started](https://github.com/zavideeva/Strange-Behaviour/blob/master/video_started.jpg)
+
+# To run yolo to find objects press 'Search', later press 'Play'.
+# [search](
+# To add new object to list of tracking items, firstly, select boundaries for object. Secondly, select object itself. Lastly add name in 
 text label and press 'Add'.
+
 To remove object from tracking items press item name in object list, press 'Remove'
     
 ## Built With
-
+PyQt5
+OpenCV
 ## Authors
 
 * **Kazybek Askarbek** - *Graphical User Interface* - [QazyBi](https://github.com/QazyBi)
