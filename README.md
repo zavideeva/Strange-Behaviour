@@ -11,11 +11,14 @@ Open yolo_gui file
 
 ### Usage:
 
+
 To start/stop a video press 'Play'.
 ![main menu](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/main_menu.jpg)
 
+
 This is how it displayed:
 ![video started](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/video_started.jpg)
+
 
 To run yolo to find objects press 'Search', later press 'Play'.
 ![search](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/search_objects.jpg)
@@ -23,20 +26,26 @@ To run yolo to find objects press 'Search', later press 'Play'.
 
 To add new object to list of tracking items: 
 
--select boundaries for object. 
+
+#### select boundaries for object. 
 ![select boundaries](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/set_border.jpg)
 
--select object itself. 
+
+#### select object itself. 
 ![select target](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/select_target.jpg)
 
--add name in text label and press 'Add'.
+
+#### add name in text label and press 'Add'.
 ![add name](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/add_target.jpg)
+
 
 Object tracking: targets rounded by a blue square
 ![target detected](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/target_detected.jpg)
 
+
 To remove object from tracking items press item's name in object list, press 'Remove'
 ![remove target](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/remove_selected.jpg)
+
 
 ## Built With
 PyQt5
