@@ -4,12 +4,12 @@ The main goal of our project is to detect strange behavior using a camera. The s
 ## Getting Started:
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
 
-## Installing
+### Installing
 
 Clone this Github repository
 Open yolo_gui file
 
-## Usage:
+### Usage:
 
 To start/stop a video press 'Play'.
 ![main menu](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/main_menu.jpg)
@@ -23,14 +23,14 @@ To run yolo to find objects press 'Search', later press 'Play'.
 
 To add new object to list of tracking items: 
 
-	select boundaries for object. 
+-select boundaries for object. 
 ![select boundaries](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/set_border.jpg)
 
-	select object itself. 
+-select object itself. 
 ![select target](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/select_target.jpg)
 
-	add name in text label and press 'Add'.
-![add name](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/add_name.jpg)
+-add name in text label and press 'Add'.
+![add name](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/add_target.jpg)
 
 Object tracking: targets rounded by a blue square
 ![target detected](https://github.com/zavideeva/Strange-Behaviour/blob/master/screenshots/target_detected.jpg)
