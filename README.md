@@ -56,6 +56,6 @@ Numpy
 * **Kazybek Askarbek** - *Graphical User Interface* - [QazyBi](https://github.com/QazyBi)
 * **Alena Zavideeva** - *Object tracking* - [Zavideeva](https://github.com/zavideeva)
 * **Leonid Tyurin** - *YOLO object detection* - [LyzeOfKiel](https://github.com/LyzeOfKiel)
-* **Tagir** - *Action Recognition* - [tagirium](https://github.com/tagirium)
+* **Tagir Shigalov** - *Action Recognition* - [tagirium](https://github.com/tagirium)
 
 
